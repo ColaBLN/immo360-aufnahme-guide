@@ -1,0 +1,11 @@
+{
+  "name": "immo360-aufnahme-guide",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "echo \"Statische Seite – kein Build nötig\""
+  },
+  "dependencies": {
+    "@vercel/functions": "^3.11.1"
+  }
+}

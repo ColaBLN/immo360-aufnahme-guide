@@ -1,0 +1,766 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#143758">
+<title>Immo360° Aufnahme-Guide</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Source+Sans+3:wght@300;400;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" defer></script>
+<style>
+:root{
+  --blue:#143758; --blue-2:#1d4a74; --yellow:#F7C047;
+  --bg:#F5F6F8; --card:#FFFFFF; --text:#143758; --muted:#6B7A8C; --line:#E3E7EC;
+  --r:18px;
+  --st:env(safe-area-inset-top,0px); --sb:env(safe-area-inset-bottom,0px);
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;background:#0d2238;font-family:"Source Sans 3",system-ui,sans-serif;color:var(--text)}
+button{font:inherit;color:inherit;border:0;background:none;cursor:pointer}
+#app{position:relative;max-width:440px;height:100%;margin:0 auto;overflow:hidden;background:var(--bg)}
+@media(min-width:600px){#app{height:min(900px,calc(100% - 40px));margin-top:20px;border-radius:36px;box-shadow:0 30px 80px rgba(0,0,0,.35)}}
+.screen{position:absolute;inset:0;display:flex;flex-direction:column;transition:opacity .35s ease,transform .35s ease}
+.hidden{opacity:0;pointer-events:none;transform:scale(1.03)}
+
+/* ---------- Sperrbildschirm ---------- */
+#lock{background:radial-gradient(120% 80% at 50% 0%,#24557f 0%,var(--blue) 55%,#0c2640 100%);color:#fff;align-items:center;padding:calc(var(--st) + 48px) 24px calc(var(--sb) + 28px)}
+.lk-brand{font-weight:600;letter-spacing:.18em;font-size:13px;opacity:.75;text-transform:uppercase}
+.lk-brand b{color:var(--yellow)}
+.lk-time{font-size:84px;font-weight:300;line-height:1;margin-top:18px;letter-spacing:-.02em}
+.lk-date{font-size:17px;opacity:.8;margin-top:6px}
+.lk-hint{margin-top:auto;font-size:15px;opacity:.85}
+.dots{display:flex;gap:18px;margin:16px 0 30px}
+.dots span{width:13px;height:13px;border-radius:50%;border:1.5px solid rgba(255,255,255,.85);transition:background .15s}
+.dots span.on{background:#fff}
+.dots.err{animation:shake .4s}
+@keyframes shake{20%,60%{transform:translateX(-10px)}40%,80%{transform:translateX(10px)}}
+.pad{display:grid;grid-template-columns:repeat(3,78px);gap:16px 26px}
+.key{width:78px;height:78px;border-radius:50%;background:rgba(255,255,255,.12);display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:32px;font-weight:300;transition:background .1s}
+.key:active{background:rgba(255,255,255,.32)}
+.key small{font-size:9px;letter-spacing:.2em;font-weight:600;opacity:.7;margin-top:-2px}
+.key.ghost{background:none;font-size:16px;font-weight:400}
+
+/* ---------- Homescreen ---------- */
+#home{background:linear-gradient(180deg,var(--blue) 0,var(--blue) 210px,var(--bg) 210px)}
+.hm-head{padding:calc(var(--st) + 22px) 22px 0;color:#fff;display:flex;justify-content:space-between;align-items:flex-start}
+.hm-head h1{font-size:28px;font-weight:700;line-height:1.1}
+.hm-head h1 span{color:var(--yellow)}
+.hm-head p{opacity:.75;font-size:15px;margin-top:4px}
+.icon-btn{width:40px;height:40px;border-radius:12px;background:rgba(255,255,255,.12);display:flex;align-items:center;justify-content:center}
+.grid{flex:1;overflow:auto;padding:26px 18px calc(var(--sb) + 24px);display:grid;grid-template-columns:1fr 1fr;gap:14px;align-content:start}
+.tile{background:var(--card);border-radius:var(--r);padding:16px;min-height:132px;display:flex;flex-direction:column;text-align:left;box-shadow:0 2px 10px rgba(20,55,88,.07);position:relative;transition:transform .12s}
+.tile:active{transform:scale(.97)}
+.tile.wide{grid-column:span 2;min-height:118px;background:var(--card);border:2px solid var(--yellow);box-shadow:0 8px 24px rgba(20,55,88,.18)}
+.tile .ic{width:44px;height:44px;border-radius:13px;background:#EEF2F6;display:flex;align-items:center;justify-content:center;margin-bottom:auto}
+.tile.wide .ic{background:var(--blue)}
+.tile .ic svg{width:24px;height:24px;stroke:var(--blue);fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.tile.wide .ic svg{stroke:var(--yellow)}
+.tile .no{position:absolute;top:16px;right:16px;font-size:13px;font-weight:600;color:var(--muted)}
+.tile.wide .no{color:var(--muted)}
+.tile h3{font-size:17px;font-weight:700;margin-top:14px;line-height:1.15}
+.tile p{font-size:13px;color:var(--muted);margin-top:2px}
+
+.bar{height:4px;border-radius:2px;background:var(--line);margin-top:10px;overflow:hidden}
+
+.bar i{display:block;height:100%;width:0;background:var(--yellow);transition:width .3s}
+
+/* ---------- Modul ---------- */
+#module{background:var(--bg)}
+.md-head{background:var(--blue);color:#fff;padding:calc(var(--st) + 14px) 18px 0}
+.md-top{display:flex;align-items:center;gap:10px}
+.md-top .back{display:flex;align-items:center;gap:4px;font-size:16px;opacity:.9;padding:6px 6px 6px 0}
+.md-top .back svg{width:22px;height:22px;stroke:#fff;fill:none;stroke-width:2}
+.md-head h2{font-size:26px;font-weight:700;margin:10px 0 2px}
+.md-head .sub{opacity:.75;font-size:15px}
+.tabs{display:flex;gap:4px;margin-top:18px}
+.tab{flex:1;padding:12px 0 14px;font-size:15px;font-weight:600;opacity:.6;border-bottom:3px solid transparent}
+.tab.on{opacity:1;border-color:var(--yellow)}
+.md-body{flex:1;overflow:auto;padding:20px 18px calc(var(--sb) + 28px)}
+.panel{display:none}.panel.on{display:block}
+
+.card{background:var(--card);border-radius:var(--r);padding:18px;box-shadow:0 2px 10px rgba(20,55,88,.06);margin-bottom:14px}
+.card h4{font-size:18px;margin-bottom:6px}
+.card p,.card li{font-size:16px;line-height:1.45;color:#2b4560}
+.card ul{padding-left:18px;margin-top:6px}
+.card li{margin:4px 0}
+.lead{font-size:18px;line-height:1.45;margin-bottom:16px}
+.tip{border-left:4px solid var(--yellow);background:#FFF8E6}
+.tip h4{display:flex;gap:8px;align-items:center}
+.ph{display:inline-block;font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;background:#EEF2F6;color:var(--muted);padding:3px 8px;border-radius:6px;margin-bottom:14px}
+
+/* Schritte */
+.steps{display:flex;overflow-x:auto;scroll-snap-type:x mandatory;gap:12px;margin:0 -18px;padding:0 18px 4px;scrollbar-width:none}
+.steps::-webkit-scrollbar{display:none}
+.step{flex:0 0 100%;scroll-snap-align:center;background:var(--card);border-radius:22px;padding:22px;box-shadow:0 2px 12px rgba(20,55,88,.08);min-height:380px;display:flex;flex-direction:column}
+.step .num{width:44px;height:44px;border-radius:50%;background:var(--blue);color:var(--yellow);font-weight:700;font-size:20px;display:flex;align-items:center;justify-content:center}
+.step h4{font-size:22px;margin:16px 0 8px;line-height:1.15}
+.step p{font-size:16px;line-height:1.5;color:#2b4560}
+.step ul{margin-top:10px;padding-left:18px}.step li{font-size:16px;line-height:1.45;color:#2b4560;margin:3px 0}
+.step .tip{margin-top:auto;padding:12px 14px;border-radius:12px;font-size:15px;line-height:1.4}
+.stepnav{display:flex;align-items:center;justify-content:space-between;margin-top:16px}
+.sdots{display:flex;gap:6px}
+.sdots span{width:7px;height:7px;border-radius:4px;background:#C9D2DC;transition:all .2s}
+.sdots span.on{width:22px;background:var(--blue)}
+.btn{background:var(--blue);color:#fff;padding:12px 20px;border-radius:14px;font-weight:600;font-size:16px}
+.btn.light{background:#E7ECF2;color:var(--blue)}
+.btn:disabled{opacity:.35}
+
+/* Checkliste */
+.cl-prog{display:flex;align-items:center;gap:12px;margin-bottom:16px}
+.cl-prog .bar{flex:1;height:8px;margin:0;border-radius:4px}
+.cl-prog b{font-size:15px;min-width:52px;text-align:right}
+.group{font-size:13px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:20px 4px 8px}
+.group:first-of-type{margin-top:0}
+.check{display:flex;align-items:center;gap:14px;width:100%;background:var(--card);padding:15px 16px;border-radius:14px;margin-bottom:8px;text-align:left;font-size:16px;line-height:1.3;box-shadow:0 1px 4px rgba(20,55,88,.05)}
+.check .box{flex:0 0 28px;height:28px;border-radius:9px;border:2px solid #C9D2DC;display:flex;align-items:center;justify-content:center;transition:all .15s}
+.check .box svg{width:16px;height:16px;stroke:var(--blue);stroke-width:3;fill:none;opacity:0}
+.check.done .box{background:var(--yellow);border-color:var(--yellow)}
+.check.done .box svg{opacity:1}
+.check.done span{color:var(--muted);text-decoration:line-through}
+.reset{display:block;margin:18px auto 0;color:var(--muted);font-size:15px;text-decoration:underline}
+
+
+.hl{background:var(--card);border-radius:14px;margin-bottom:8px;box-shadow:0 1px 4px rgba(20,55,88,.05);overflow:hidden}
+.hl-head{display:flex;align-items:center;gap:10px;width:100%;padding:15px 16px;text-align:left}
+.hl-n{flex:1;font-size:17px;font-weight:600}
+.pill{font-size:12px;font-weight:700;background:#FFF3D6;color:#8a6410;padding:4px 9px;border-radius:20px;white-space:nowrap}
+.chev{width:20px;height:20px;stroke:var(--muted);fill:none;stroke-width:2;transition:transform .2s}
+.hl.open .chev{transform:rotate(180deg)}
+.hl-body{display:none;padding:0 16px 16px;border-top:1px solid var(--line)}
+.hl.open .hl-body{display:block}
+.hl-sec{margin-top:14px}
+.hl-sec>b{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.hl-sec p,.hl-sec li{font-size:16px;line-height:1.45;color:#2b4560}
+.hl-sec ul{padding-left:18px;margin-top:4px}
+.dev{margin-top:8px}
+.badge{display:inline-block;font-size:12px;font-weight:700;padding:3px 9px;border-radius:6px}
+.badge.mp{background:var(--blue);color:#fff}.badge.sp{background:#E7ECF2;color:var(--blue)}
+.hl .tip{margin-top:14px}
+
+.fig{margin:0 0 14px;background:var(--card);border-radius:var(--r);overflow:hidden;box-shadow:0 2px 10px rgba(20,55,88,.06)}
+.fig img{display:block;width:100%;height:auto;cursor:zoom-in}
+.fig figcaption{padding:10px 14px;font-size:14px;color:var(--muted)}
+.step-img{display:block;width:100%;border-radius:12px;margin-top:14px;cursor:zoom-in}
+.zoom{position:absolute;inset:0;background:rgba(8,20,34,.94);z-index:10;display:flex;align-items:center;justify-content:center;padding:16px}
+.zoom.hidden{display:none}
+.zoom img{max-width:100%;max-height:100%;border-radius:8px}
+.zoom span{position:absolute;top:calc(var(--st) + 14px);right:18px;color:#fff;font-size:15px;opacity:.8}
+.diag{width:100%;height:auto;margin-top:6px}
+.fld{display:block;margin-top:12px}
+.fld span{display:block;font-size:14px;color:var(--muted);margin-bottom:4px}
+.fld input{width:100%;font:inherit;font-size:17px;padding:12px 14px;border:1.5px solid var(--line);border-radius:12px;color:var(--text);background:#FAFBFC}
+.fld input:focus{outline:none;border-color:var(--blue)}
+.seg{display:flex;background:#EEF2F6;border-radius:12px;padding:4px;margin-top:14px}
+.seg button{flex:1;padding:10px 0;border-radius:9px;font-size:15px;font-weight:600;color:var(--muted)}
+.seg button.on{background:#fff;color:var(--blue);box-shadow:0 1px 4px rgba(20,55,88,.12)}
+.res{margin-top:14px}
+.rz{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--line);font-size:15px}
+.rz span{color:#2b4560}.rz b{white-space:nowrap}
+.rz.tot{border:0;font-size:18px;padding-top:12px}.rz.tot b{color:var(--blue);background:#FFF3D6;padding:4px 10px;border-radius:8px}
+.hint{font-size:14px;color:var(--muted);margin-top:10px}
+.warn{font-size:15px;color:#b23b2a;margin-top:10px}
+.x{margin-left:8px;color:var(--muted);font-size:14px}
+
+.cta{grid-column:span 2;display:flex;align-items:center;justify-content:center;gap:10px;background:var(--yellow);color:var(--blue);font-weight:700;font-size:17px;padding:15px;border-radius:var(--r);box-shadow:0 4px 14px rgba(247,192,71,.35)}
+.cta svg{width:20px;height:20px;stroke:var(--blue);stroke-width:3;fill:none}
+.cta small{font-size:13px;background:rgba(20,55,88,.12);padding:2px 8px;border-radius:10px}
+.btn.yellow{background:var(--yellow);color:var(--blue)}
+.fld textarea{width:100%;font:inherit;font-size:16px;padding:12px 14px;border:1.5px solid var(--line);border-radius:12px;color:var(--text);background:#fff;resize:vertical}
+.fld textarea:focus{outline:none;border-color:var(--blue)}
+/* Platzhalter-Modul */
+.soon{text-align:center;padding:50px 20px;color:var(--muted)}
+.soon .ic{width:72px;height:72px;margin:0 auto 18px;border-radius:22px;background:#E7ECF2;display:flex;align-items:center;justify-content:center}
+.soon svg{width:34px;height:34px;stroke:var(--blue);fill:none;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+.soon h4{color:var(--blue);font-size:20px;margin-bottom:6px}
+
+/* Dialog */
+.dlg{position:absolute;inset:0;background:rgba(12,30,50,.45);display:flex;align-items:flex-end;z-index:9}
+.dlg.hidden{display:none}
+.sheet{background:#fff;width:100%;border-radius:24px 24px 0 0;padding:24px 20px calc(var(--sb) + 22px)}
+.sheet h4{font-size:19px;margin-bottom:6px}.sheet p{color:var(--muted);margin-bottom:18px}
+.sheet .row{display:flex;gap:10px}.sheet .row .btn{flex:1}
+</style>
+</head>
+<body>
+<div id="app">
+
+  <!-- Homescreen -->
+  <section id="home" class="screen">
+    <div class="hm-head">
+      <div><h1>Immo<span>360°</span></h1><p>Aufnahme-Guide für Makler &amp; Marketing</p></div>
+      <button class="icon-btn" id="lockBtn" aria-label="Abmelden und sperren">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
+      </button>
+    </div>
+    <div class="grid" id="grid"></div>
+  </section>
+
+  <!-- Modul -->
+  <section id="module" class="screen hidden">
+    <div class="md-head">
+      <div class="md-top"><button class="back" id="backBtn"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg>Übersicht</button></div>
+      <h2 id="mdTitle"></h2>
+      <div class="sub" id="mdSub"></div>
+      <div class="tabs" id="tabs">
+      </div>
+    </div>
+    <div class="md-body" id="mdBody"></div>
+  </section>
+
+  <div class="zoom hidden" id="zoom"><span>Schließen ✕</span><img id="zoomImg" alt=""></div>
+  <div class="dlg hidden" id="dlg"><div class="sheet">
+    <h4 id="dlgH"></h4><p id="dlgP"></p>
+    <div class="row"><button class="btn light" id="dlgNo">Abbrechen</button><button class="btn" id="dlgYes">Zurücksetzen</button></div>
+  </div></div>
+</div>
+
+<script>
+
+/* ---------- Icons ---------- */
+const I = {
+  termin:'<path d="M12 21s-7-6.2-7-11.5A7 7 0 0 1 19 9.5C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/>',
+  highlight:'<path d="M12 3l2.6 5.6 6 .7-4.5 4.1 1.2 6L12 16.5 6.7 19.4l1.2-6L3.4 9.3l6-.7z"/>',
+  foto:'<path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/>',
+  metaport:'<circle cx="12" cy="12" r="8"/><ellipse cx="12" cy="12" rx="8" ry="3"/><path d="M12 4v16"/>',
+  magicplan:'<path d="M4 4h16v16H4z"/><path d="M4 12h7v8M11 4v5M15 12h5"/>',
+  smartphone:'<rect x="7" y="3" width="10" height="18" rx="2"/><path d="M11 18h2"/>',
+  flaeche:'<path d="M3 20h18M5 20V10l7-6 7 6v10"/><path d="M9 20v-5h6v5"/>',
+  soon:'<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>'
+};
+const svg = k => `<svg viewBox="0 0 24 24">${I[k]}</svg>`;
+
+/* ---------- Inhalte (Platzhalter – werden mit euren Inhalten ersetzt) ---------- */
+const MODULES = [
+ { id:'termin', no:1, title:'Termin vor Ort', sub:'Der Ablauf vom Ankommen bis zum Upload', icon:'termin', wide:true, abschluss:true,
+   verstehen:{
+     lead:'Eigennutzer entscheiden emotional. Wir zeigen die Highlights – mit wenigen, ausdrucksstarken Bildern, die neugierig machen und zur Anfrage des iEx führen.',
+     cards:[
+       {h:'Für wen fotografieren wir?', p:'Für Eigennutzer – und die kaufen mit dem Herzen:', list:['Südbalkon mit Blick über die Stadt → <b>Exklusivität</b>','Terrasse zum Grillen mit Freunden → <b>Träumen</b>','Garten zum Toben mit den Kindern → <b>Sicherheit & Familie</b>']},
+       {h:'Was wir womit aufnehmen', list:['<b>Matterport Pro2:</b> Standardfall. Der 3D-Rundgang liefert gleichzeitig alle Innenfotos inkl. Balkon & Terrasse','<b>Smartphone:</b> Außenansicht, Mikrolage, Details, Herobild','<b>Mehrfamilienhaus:</b> nur Smartphone, keine 3D-Tour','<b>Magicplan (iPad):</b> Aufmaß & Grundriss']},
+       {h:'Equipment', list:['Koffer mit Kamera & Ladekabeln','iPad Pro mit Lidar-Sensor','Stativ, Stativkopf & Schnellwechselplatte','Bluetooth-Laser von Bosch','Smartphone']},
+       {h:'Licht – Tageslicht!', p:'Räume sollen möglichst groß und hell wirken.', list:['Vorhänge auf, Jalousien hoch','Deckenlampen aus','Zimmertüren öffnen']},
+       {h:'Wetter', list:['Im Winter sind die Tage kurz – Zeit einplanen','Vorher in den Wetterbericht schauen','Ohne Balkon spielt das Wetter kaum eine Rolle','Eigentümer nach eigenen Sommerfotos fragen','Außenfotos ggf. beim Besichtigungstermin nachholen']},
+       {h:'Haustiere', list:['Vorab mit den Eigentümern sprechen','Fragen, was möglich ist: Korb & Napf beiseite? Spaziergang während der Aufnahme?','Den Fressnapf nie selbst anfassen – Hunde verstehen da keinen Spaß']},
+       {h:'Bei Fragen', p:'Cola · 0173 / 770 15 19'}
+     ],
+     tip:{h:'Merksatz', p:'Der erste Eindruck ist entscheidend, der letzte bleibt im Kopf!'}
+   },
+   steps:[
+     {h:'Vor dem Termin', p:'Planen, prüfen, laden.', list:['Termin in den Kalender, Verfügbarkeit des Equipments prüfen','Equipment auf Vollständigkeit prüfen','Alle Akkus laden','Wetterbericht checken','Eigentümer: Haustiere klären, Vorbereitungstipps schicken'], tip:'Im Winter früh am Tag einplanen – das Tageslicht ist knapp.'},
+     {h:'Ankommen & Highlights finden', p:'Erst schauen, was die Immobilie besonders macht.', list:['Balkon, Terrasse, Garten, Pool','Altbau-Fußböden, Stuck, hohe Decken, Kamin','Besondere Ausstattung: Sauna, PV-Anlage, Fahrstuhl …','Eigentümer nach Sommerfotos fragen'], tip:'Das Highlight wird das Herobild – der erste Eindruck im Portal.'},
+     {h:'Licht & Innenräume', p:'Groß, hell, aufgeräumt.', list:['Gardinen & Jalousien auf, Deckenlampen aus','Zimmertüren öffnen','Persönliches minimieren, Schuhe & Jacken ordnen','Fernbedienungen verstecken, Kabel weg','Zeitschriften & Bücher weg','Bett machen, ggf. Tagesdecke'], tip:'Ausnahme Licht: Flur, Küchenunterbau-Lampen oder Deckenspots dürfen an.'},
+     {h:'Bad & Küche', p:'Leere Flächen wirken größer.', list:['Arbeitsflächen leeren & säubern','Geschirr wegpacken','Geschirrtücher & Spülmittel weg – auch nicht am Ofen','Kein Essen auf Herd oder Tisch','Zahnbürsten & Shampoo in den Schrank','Handtücher weglegen']},
+     {h:'Balkon, Terrasse, Garten', p:'Einen einladenden Außenbereich schaffen.', list:['Aufräumen, Geräte beiseite','Aschenbecher & Flaschen weg','Gartenmöbel & Grill abdecken','Abdeckfolie vom Pool abnehmen','Kinderspielzeug wegräumen'], tip:'Zum Träumen verführen – das ist der Moment fürs Herobild.'},
+     {h:'Matterport aufbauen', p:'Einmal richtig aufbauen, dann läuft es.', list:['Stativ aufklappen, ausfahren, aufstellen','Höhe: Stativkopf <b>eine Faustbreit</b> hochfahren – auf Balkonen <b>zwei Faustbreit</b>','Kamera mit Schnellwechseladapter aufs Stativ','<b>Kamera-Stativ-Verbindung kontrollieren!</b>','Kamera einschalten','iPad per WLAN mit der Kamera verbinden (Code 1234)','App „Matterport“ öffnen'], tip:'Die Verbindung Kamera–Stativ lieber zweimal prüfen.'},
+     {h:'3D-Rundgang scannen', p:'Linear durch die Immobilie – Scan für Scan.', list:['Erster Scan immer <b>innen</b> – nicht auf dem Balkon oder vor der Haustür','Zwischen den Scans nur wenige Meter versetzen','Alle Räume scannen = alle Innenfotos','Terrasse & Balkon nicht vergessen','Treppen: alle 3–4 Stufen ein Scan, neue Etage anlegen','Außen, Garten, Nebengelass: auf „360°-Aufnahme“ umstellen – danach zurück auf „3D-Scan“'], tip:'Unsicher beim Licht? Ein Scan mit und einer ohne Oberlicht.'},
+     {h:'Smartphone-Fotos', p:'Wenige Fotos, aber gute. Keine Schnappschüsse.', list:['Querformat 16:9, gerade halten','Linse sauber? HDR an, Raster an','Details: Holzböden, Stuck, Altbautüren, Kamin','Außen: Fassade, Einfahrt, Haus & Straße','Mikrolage: Kiez, ÖPNV, Spielplätze, Seen, Wälder'], tip:'Wer wohnt dort? Familien suchen Sicherheit, andere Familien und Natur.'},
+     {h:'Aufmaß mit Magicplan', p:'iPad Autoscan mit Lidar.', list:['Maße mit Bluetooth-Laser kontrollieren & nachtragen','Deckenhöhe in die Notizen','Dachschrägen: 1 m & 2 m zur Wand – Infos an Cola!','Terrasse & Balkon einzeichnen','Anschlüsse in Bad & Küche einzeichnen','Keine Möbel','Garagen & Nebengelass messen, wo möglich']},
+     {h:'Abschluss', p:'Vor dem Gehen kurz prüfen.', list:['Alle Räume im Rundgang?','Highlights & Herobild im Kasten?','Aufmaß vollständig?','Immobilie wie vorgefunden verlassen'], tip:'Lieber vor Ort 5 Minuten prüfen als einen zweiten Termin machen.'}
+   ],
+   checklist:[
+     {g:'Vorher', items:['Termin im Kalender, Equipment verfügbar','Equipment vollständig','Akkus geladen','Wetterbericht gecheckt','Haustiere mit Eigentümer geklärt']},
+     {g:'Highlights · Garten, Terrasse, Balkon', items:['Ordnung & Sauberkeit geschaffen','Aschenbecher, Flaschen etc. weg','Gartenmöbel & Grill abgedeckt','Pool-Abdeckfolie abgenommen','Kinderspielzeug weggeräumt']},
+     {g:'Innenaufnahmen', items:['Gardinen & Jalousien auf','Deckenlampen aus','Zimmertüren offen','Persönliches minimiert, Schuhe & Jacken geordnet','Fernbedienungen & Kabel versteckt','Zeitschriften & Bücher weg','Bett gemacht','Haustiere & Zubehör raus']},
+     {g:'Bad & Küche', items:['Arbeitsflächen leer & sauber','Geschirr weggepackt','Geschirrtücher & Spülmittel weg','Kein Essen auf Herd oder Tisch','Zahnbürsten, Zubehör & Shampoo im Schrank','Handtücher weg']},
+     {g:'3D-Rundgang', items:['Kamera-Stativ-Verbindung kontrolliert','Erster Scan innen','Alle Räume gescannt','Terrasse & Balkon gescannt','Außen / Garten als 360°-Aufnahme']},
+     {g:'Smartphone · Außen & Mikrolage', items:['Immobilie außen','Details (Böden, Stuck, Türen)','Direkte Nachbarschaft & Kiez-Highlights','Verkehrsanbindung / Spielstraße','Seen, Wälder, Spielplätze']},
+     {g:'Aufmaß Magicplan', items:['Alle Räume aufgenommen','Maße mit Laser kontrolliert','Deckenhöhe notiert','Dachschrägen 1 m / 2 m an Cola','Terrasse & Balkon eingezeichnet','Anschlüsse Bad & Küche eingezeichnet','Garagen & Nebengelass']}
+   ]
+ },
+ { id:'highlights', no:2, title:'Highlights erkennen', sub:'Was eine Immobilie besonders macht', icon:'highlight',
+   verstehen:{
+     lead:'Highlights verkaufen. Sie lösen Gefühle aus – und Eigennutzer entscheiden emotional.',
+     cards:[
+       {h:'Das Herobild', p:'Das stärkste Highlight wird das erste Bild im Portal. Es entscheidet, ob jemand klickt und das iEx anfordert.'},
+       {h:'Drei Gefühle, die wir ansprechen', list:['<b>Exklusivität:</b> Südbalkon mit Blick über die Stadt','<b>Träumen:</b> Terrasse, um mit Freunden zu grillen','<b>Sicherheit & Familie:</b> Garten, um mit den Kindern zu toben']},
+       {h:'Wenige, starke Bilder', p:'Mit wenigen, ausdrucksstarken Fotos Aufmerksamkeit erzeugen. Neugierig machen – nicht alles zeigen.'},
+       {h:'Impressionen & Details', p:'Für mehr Emotionalität: Stuckrosetten, gemauerter Kamin, besondere Böden und Materialien, Pflanzen, Blumen, Garten.'}
+     ],
+     images:[{src:'img/hl-aussen.jpg', cap:'Terrasse & Balkon: links vorher ✗, rechts nachher ✓'},{src:'img/besondere.jpg', cap:'Besondere Highlights: schöner Boden, gemütliche Sitzecke'}],
+     tip:{h:'Merksatz', p:'Erst das Highlight finden – dann alles andere fotografieren.'}
+   },
+   catalogLabel:'Katalog',
+   catalog:[
+     {g:'Außen', items:[
+       {n:'Garten', f:'Sicherheit & Familie', prep:['Aufräumen, Geräte beiseite','Rasen frisch mähen (Eigentümer bitten)','Kinderspielzeug wegräumen','Gartenmöbel & Grill abdecken'], shoot:[['Matterport','360°-Aufnahme statt 3D-Scan – danach zurück auf 3D-Scan'],['Smartphone','Herobild im Querformat, pralle Mittagssonne meiden']], tip:'Eigentümer nach Sommerfotos fragen.'},
+       {n:'Terrasse', f:'Träumen', prep:['Aschenbecher, Flaschen & Unrat weg','Gartenmöbel & Grill abdecken','Einladend wirken lassen'], shoot:[['Matterport','Unbedingt mitscannen – so nah wie möglich am Haus, Abstände zwischen den Scans verringern'],['Smartphone','Herobild, Querformat 16:9']]},
+       {n:'Balkon', f:'Exklusivität', prep:['Aufräumen, Geräte beiseite','Pflanzen dürfen bleiben'], shoot:[['Matterport','Mitscannen – Stativkopf zwei Faustbreit hoch'],['Smartphone','Den Blick mit ins Bild nehmen']], tip:'Südbalkon? Die Ausrichtung ist ein Verkaufsargument.'},
+       {n:'Dachterrasse', f:'Exklusivität', prep:['Aufräumen, Möbel ordnen','Grill abdecken'], shoot:[['Matterport','Mitscannen – Stativkopf zwei Faustbreit hoch'],['Smartphone','Weite und Blick zeigen – oft das Herobild']]},
+       {n:'Pool', f:'Träumen', prep:['Umgebung aufräumen','Abdeckfolie vom Pool abnehmen – Wasser zeigen','Sitzmöbel abdecken'], shoot:[['Matterport','360°-Aufnahme'],['Smartphone','Herobild bei Sonne']]},
+       {n:'Lage & Nachbarschaft', f:'Sicherheit & Familie', prep:['Wer wohnt dort und wie?'], shoot:[['Smartphone','Kiez & Kiez-Highlights, Restaurants','ÖPNV, Spielstraße, Spielplätze','Seen & Wälder']], tip:'Familien suchen Sicherheit, andere Familien und Natur.'}
+     ]},
+     {g:'Altbau & Raum', items:[
+       {n:'Dielen & besondere Böden', f:'Charakter', prep:['Boden frei räumen, Teppiche ggf. weg','Sauber machen'], shoot:[['Matterport','Wird im Raum mit erfasst'],['Smartphone','Detailaufnahme – ungewöhnliche Perspektive, nah ran']]},
+       {n:'Hohe Decken', f:'Großzügigkeit', prep:['Deckenlampen aus'], shoot:[['Matterport','Zeigt die Raumhöhe im Rundgang'],['Smartphone','Gerade halten – keine stürzenden Linien']], tip:'Deckenhöhe in die Magicplan-Notizen schreiben.'},
+       {n:'Stuck & Rosetten', f:'Charakter', prep:['–'], shoot:[['Smartphone','Detailaufnahme für Impressionen']]},
+       {n:'Altbautüren', f:'Charakter', prep:['Türen öffnen bzw. sauber schließen'], shoot:[['Smartphone','Detailaufnahme']]},
+       {n:'Kamin', f:'Gemütlichkeit', prep:['Holz ordentlich stapeln, Asche weg'], shoot:[['Smartphone','Gemauerter Kamin als Impression']]}
+     ]},
+     {g:'Besondere Ausstattung', items:[
+       {n:'Sauna', f:'Wellness', prep:['Handtücher & Zubehör weg'], shoot:[['Matterport','Mitscannen, wenn begehbar'],['Smartphone','Detail / Impression']]},
+       {n:'Fußbodenheizung', f:'Komfort', prep:['–'], shoot:[['Smartphone','Unsichtbar – ggf. Thermostat fotografieren, im Exposé nennen']]},
+       {n:'Klimaanlage', f:'Komfort', prep:['–'], shoot:[['Smartphone','Gerät als Detail']]},
+       {n:'PV-Anlage', f:'Zukunft & Kosten', prep:['–'], shoot:[['Smartphone','Dach von außen, ggf. Speicher']]},
+       {n:'Fahrstuhl', f:'Komfort', prep:['–'], shoot:[['Smartphone','Kurz dokumentieren']]},
+       {n:'Carport & Garage', f:'Komfort', prep:['Aufräumen'], shoot:[['Smartphone','Außenaufnahme']], tip:'Maße in Magicplan aufnehmen, wo möglich.'},
+       {n:'Hausautomation', f:'Komfort', prep:['–'], shoot:[['Smartphone','Bedienpanel als Detail']]}
+     ]}
+   ],
+   checklist:[
+     {g:'Außen', items:['Garten','Terrasse','Balkon','Dachterrasse','Pool','Lage & Nachbarschaft']},
+     {g:'Altbau & Raum', items:['Dielen & besondere Böden','Hohe Decken','Stuck & Rosetten','Altbautüren','Kamin']},
+     {g:'Besondere Ausstattung', items:['Sauna','Fußbodenheizung','Klimaanlage','PV-Anlage','Fahrstuhl','Carport & Garage','Hausautomation']},
+     {g:'Herobild', items:['Stärkstes Highlight festgelegt','Herobild aufgenommen']}
+   ]
+ },
+ { id:'foto', no:3, title:'Foto-Basics', sub:'Licht, Raumwirkung, Linien', icon:'foto',
+   verstehen:{
+     lead:'Gute Immobilienfotos entstehen vor dem Auslösen: Licht, Ordnung und eine ruhige, gerade Perspektive.',
+     cards:[
+       {h:'Tageslicht ist König', p:'Aufnahmen bei Tageslicht wirken natürlich und authentisch. Vorhänge & Fensterläden auf, Jalousien hoch, Deckenlampen aus. Räume sollen möglichst groß und hell wirken.'},
+       {h:'Mehr Raumwirkung', p:'Alles, was auf Schränken, Arbeitsflächen, Regalen und Tischen steht, verstauen. Je klarer die Sicht, desto heller und größer wirkt der Raum.'},
+       {h:'Neutraler Charme', p:'Persönliche Gegenstände, Dekoration und Fotos reduzieren. Käufer sollen sich selbst in den Räumen sehen.'},
+       {h:'Sauberkeit zahlt sich aus', p:'Keine Grundreinigung nötig – aber Oberflächen und Armaturen kurz abwischen. Gepflegt wirkt wertvoll.'},
+       {h:'Gerade Linien', p:'Kamera bzw. Smartphone gerade halten. Senkrechte Kanten (Türen, Wände, Fenster) müssen senkrecht bleiben – keine stürzenden Linien.'}
+     ],
+     images:[
+       {src:'img/raumwirkung.jpg', cap:'Mehr Raumwirkung: voll gestellt ✗ – aufgeräumt ✓'},
+       {src:'img/neutral.jpg', cap:'Neutraler Charme: persönliche Gegenstände ✗ – neutral ✓'},
+       {src:'img/sauber.jpg', cap:'Sauberkeit: verschmutzt ✗ – sauber ✓'},
+       {src:'img/innen.jpg', cap:'Innenaufnahmen: links vorher ✗, rechts nachher ✓'},
+       {src:'img/bad-kueche.jpg', cap:'Bad & Küche: links vorher ✗, rechts nachher ✓'}
+     ],
+     tip:{h:'Merksatz', p:'Kleine Veränderungen, große Effekte.'}
+   },
+   steps:[
+     {h:'Licht', p:'Tageslicht rein, Kunstlicht aus.', list:['Vorhänge & Fensterläden auf, Jalousien hoch','Deckenlampen aus','Ausnahme: Flur, Küchenunterbau-Lampen, Deckenspots'], tip:'Unsicher? Eine Aufnahme mit und eine ohne Licht.'},
+     {h:'Raumwirkung', p:'Flächen freiräumen.', list:['Schränke, Regale, Tische & Arbeitsflächen leeren','Alltägliches in Schränke oder Kisten','Kabel verstecken, Fernbedienungen weg','Zeitschriften & Bücher weg'], img:'img/raumwirkung.jpg'},
+     {h:'Neutral', p:'Raum für die Vorstellung der Käufer.', list:['Persönliche Fotos & Deko reduzieren','Schuhe & Jacken ordnen','Bett machen, ggf. Tagesdecke'], img:'img/neutral.jpg'},
+     {h:'Sauber', p:'Kurz abwischen reicht.', list:['Oberflächen abwischen','Armaturen & Spiegel streifenfrei','Kein Müll, keine Handtücher'], img:'img/sauber.jpg'},
+     {h:'Türen & Blickachsen', p:'Offene Türen machen Räume größer.', list:['Zimmertüren öffnen','Türen einheitlich stehen lassen','Durchblicke in den nächsten Raum nutzen']},
+     {h:'Gerade halten', p:'Senkrechte bleiben senkrecht.', list:['Kamera auf Brust- bis Hüfthöhe','Nicht nach oben oder unten kippen','Raster als Hilfe nutzen'], tip:'Lieber etwas weniger im Bild als schiefe Wände.'},
+     {h:'Wenige, starke Bilder', p:'Qualität vor Menge.', list:['Highlights zuerst','Ein klares Herobild','Details für Emotion'], tip:'Neugierig machen – nicht alles zeigen.'}
+   ],
+   checklist:[
+     {g:'Pro Raum', items:['Tageslicht rein, Deckenlampen aus','Flächen freigeräumt','Persönliches reduziert','Kabel & Fernbedienungen weg','Oberflächen abgewischt','Türen offen']},
+     {g:'Bild', items:['Gerade, keine stürzenden Linien','Highlight im Bild','Herobild festgelegt']}
+   ]
+ },
+ { id:'matterport', no:4, title:'Matterport Pro2', sub:'3D-Rundgang & Innenfotos', icon:'metaport',
+   verstehen:{
+     lead:'Die Matterport Pro2 ist unser Standard: Ein Durchgang liefert den 3D-Rundgang und gleichzeitig alle Innenfotos – inklusive Balkon, Terrasse und Garten.',
+     cards:[
+       {h:'Warum Matterport?', list:['Sehr gute Fotos „out of the box“','Korrigiert schwierige Lichtverhältnisse innen','Standardfall = 3D-Tour','Ausnahme Mehrfamilienhaus: nur Smartphone']},
+       {h:'Equipment', list:['Koffer mit Kamera & Ladekabeln','iPad Pro mit Lidar-Sensor','Stativ, Stativkopf & Schnellwechselplatte','Bluetooth-Laser von Bosch']},
+       {h:'Zwei Scan-Arten', list:['<b>3D-Scan:</b> Standard für den Rundgang','<b>360°-Aufnahme:</b> Garten, Nebengelass – überall, wo kein 3D-Scan möglich ist']},
+       {h:'Das Wichtigste', p:'Die Kamera wird zwischen den Scans immer nur wenige Meter versetzt – man bewegt sich linear durch die Immobilie. Der erste Scan ist immer innen, nie auf dem Balkon oder vor der Haustür.'},
+       {h:'Zu viel Licht draußen', p:'Bei Außenaufnahmen funktionieren 3D-Scans oft nicht.', list:['So nah wie möglich am Haus scannen','Pralle Mittagssonne meiden','Abstände zwischen den Scans deutlich verringern','Sonst: 360°-Aufnahme']}
+     ],
+     images:[
+       {src:'img/mp-bsp1.jpg', cap:'Beispiele Matterport: Terrasse, Garten, Wohnbereich'},
+       {src:'img/mp-bsp2.jpg', cap:'Beispiele Matterport: Innenaufnahmen'}
+     ],
+     tip:{h:'Merksatz', p:'Innen starten, linear bewegen, kleine Schritte.'}
+   },
+   steps:[
+     {h:'Vor der Tour', p:'Planen und laden.', list:['In den Kalender eintragen, Verfügbarkeit prüfen','Equipment auf Vollständigkeit prüfen','Akkus von Kamera & iPad laden']},
+     {h:'Stativ & Kamera', p:'Sicher aufbauen.', list:['Stativ aufklappen, ausfahren, aufstellen','Stativkopf <b>eine Faustbreit</b> hochfahren – auf Balkonen <b>zwei</b>','Kamera mit Schnellwechseladapter aufsetzen','<b>Kamera-Stativ-Verbindung kontrollieren!</b>','Kamera einschalten'], tip:'Die Verbindung lieber zweimal prüfen – ein Sturz kostet die Kamera.'},
+     {h:'iPad verbinden', p:'Kamera und App koppeln.', list:['iPad entsperren (Code 1234)','In den WLAN-Einstellungen mit der Matterport-Kamera verbinden','App „Matterport“ öffnen, neues Projekt anlegen']},
+     {h:'Raum vorbereiten', p:'Bevor der erste Scan läuft.', list:['Vorhänge auf, Jalousien hoch, Tageslicht rein','Deckenlampen aus (Ausnahme: Flur, Küchenunterbau, Spots)','Alle Zimmertüren öffnen','Ordnung schaffen – siehe Foto-Basics']},
+     {h:'Erster Scan – innen', p:'Der Tourstart ist immer in der Wohnung.', list:['Nicht auf dem Balkon oder vor der Haustür starten','Kamera in den Raum stellen, nicht direkt an die Wand','„3D-Scan“ auslösen','Selbst aus dem Sichtfeld der Kamera gehen'], tip:'Matterport empfiehlt rund 60 cm Abstand zur Wand.'},
+     {h:'Linear weiterscannen', p:'Schritt für Schritt durch die Immobilie.', list:['Immer nur wenige Meter versetzen (Matterport-Empfehlung: ca. 1,5–2,5 m)','Mindestens zwei Scans pro Raum','An Türen: je ein Scan vor und hinter der Tür','Während der Tour nichts verrücken'], tip:'Fehlermeldung „zu weit“? Einfach näher an den letzten Punkt.'},
+     {h:'Treppen & Etagen', p:'Damit die Etagen sauber verbunden werden.', list:['Alle 3–4 Stufen ein Scan','Oben angekommen: neue Etage anlegen']},
+     {h:'Balkon, Terrasse, Garten', p:'Die Highlights nicht vergessen!', list:['Terrasse & Balkon mitscannen – nah am Haus','Bei zu viel Licht: Abstände verringern','Garten & Nebengelass: auf „360°-Aufnahme“ umstellen','<b>Danach zurück auf „3D-Scan“</b>, wenn die Tour weitergeht'], tip:'Licht unsicher? Ein Scan mit und einer ohne Oberlicht.'},
+     {h:'Abschluss', p:'Vor dem Abbauen prüfen.', list:['Minikarte: alle Räume erfasst, keine schwarzen Lücken?','Fenster & Spiegel in der App markieren','Scans vor dem Upload kontrollieren'], tip:'Fenster & Spiegel markieren ist eine Matterport-Empfehlung – das verhindert Fehler im 3D-Modell.'}
+   ],
+   checklist:[
+     {g:'Vorher', items:['Kalender eingetragen','Equipment vollständig','Akkus geladen']},
+     {g:'Aufbau', items:['Stativkopf 1 Faust (Balkon 2)','Kamera-Stativ-Verbindung kontrolliert','iPad mit Kamera verbunden','App „Matterport“ offen']},
+     {g:'Scan', items:['Licht: Vorhänge auf, Lampen aus','Türen offen','Erster Scan innen','Alle Räume gescannt','Treppen alle 3–4 Stufen','Balkon & Terrasse gescannt','Garten / Nebengelass als 360°','Zurück auf 3D-Scan gestellt']},
+     {g:'Abschluss', items:['Keine Lücken in der Minikarte','Fenster & Spiegel markiert']}
+   ]
+ },
+ { id:'magicplan', no:5, title:'Magicplan', sub:'Aufmaß & Grundriss mit dem iPad', icon:'magicplan',
+   verstehen:{
+     lead:'Mit Magicplan auf dem iPad Pro entsteht vor Ort das Aufmaß – die Grundlage für Grundriss und Wohnflächenberechnung.',
+     cards:[
+       {h:'So funktioniert es', p:'Der Lidar-Sensor des iPads scannt den Raum automatisch: Wände, Ecken, Türen, Fenster und Deckenhöhe. Mit dem Bosch-Laser per Bluetooth werden die Maße kontrolliert und genau nachgetragen.'},
+       {h:'Was rein muss', list:['Alle Räume','Deckenhöhe (in die Notizen)','Dachschrägen: 1-m- und 2-m-Linie','Terrasse & Balkon','Anschlüsse in Bad & Küche','Garagen & Nebengelass, wo möglich']},
+       {h:'Was nicht rein muss', list:['Keine Möbel']},
+       {h:'Dachschrägen', p:'Bei Dachschrägen zählt jeder Zentimeter für die Wohnfläche. Wie man die 1-m- und 2-m-Linie misst, steht im Modul „Wohnfläche“. Die Infos gehen an Cola.'},
+       {h:'Bei Fragen', p:'Cola · 0173 / 770 15 19'}
+     ],
+     tip:{h:'Merksatz', p:'Scannen geht schnell – Kontrollieren macht es richtig.'}
+   },
+   steps:[
+     {h:'Vorbereiten', p:'iPad & Laser startklar.', list:['iPad Pro geladen','Bosch-Laser geladen, Bluetooth an','Magicplan öffnen, neues Projekt mit Objektadresse anlegen','Etage wählen bzw. anlegen'], tip:'Bezeichnungen in der App können je nach Version leicht abweichen.'},
+     {h:'Raum scannen', p:'Autoscan mit Lidar.', list:['Raum hinzufügen und Scan starten','Langsam an den Wänden entlang schwenken','Ecken, Türen und Fenster erfassen','Raum benennen (Wohnzimmer, Bad …)']},
+     {h:'Maße kontrollieren', p:'Der Laser macht es genau.', list:['Laser mit Magicplan verbinden','Wand im Plan antippen','Mit dem Laser messen – Wert wird übernommen','Abweichungen korrigieren bzw. nachtragen']},
+     {h:'Deckenhöhe', p:'Für die Wohnfläche wichtig.', list:['Deckenhöhe mit dem Laser messen','In die Notizen des Raums schreiben']},
+     {h:'Dachschrägen', p:'Die 1-m- und 2-m-Linie.', list:['Abstand zur Wand bei 1 m Raumhöhe messen','Abstand zur Wand bei 2 m Raumhöhe messen','In die Notizen schreiben','<b>Infos an Cola!</b>'], tip:'Wie genau – siehe Modul „Wohnfläche“.'},
+     {h:'Balkon & Terrasse', p:'Gehören ins Aufmaß.', list:['Balkon bzw. Terrasse einzeichnen','Maße mit dem Laser prüfen']},
+     {h:'Anschlüsse', p:'Für Käufer und Planung.', list:['Anschlüsse im Bad einzeichnen','Anschlüsse in der Küche einzeichnen']},
+     {h:'Nebengelass & Garage', p:'Wo möglich mitmessen.', list:['Garage','Nebengelass, Schuppen, Keller'], tip:'Keine Möbel einzeichnen.'},
+     {h:'Plan prüfen', p:'Vor dem Gehen.', list:['Alle Räume im Plan?','Räume richtig verbunden?','Notizen vollständig (Höhen, Schrägen)?']}
+   ],
+   checklist:[
+     {g:'Start', items:['iPad & Laser geladen','Laser per Bluetooth verbunden','Projekt mit Adresse angelegt']},
+     {g:'Aufmaß', items:['Alle Räume gescannt','Maße mit Laser kontrolliert','Deckenhöhe notiert','Dachschrägen 1 m / 2 m gemessen','Infos Dachschrägen an Cola','Terrasse & Balkon eingezeichnet','Anschlüsse Bad eingezeichnet','Anschlüsse Küche eingezeichnet','Keine Möbel im Plan','Garage & Nebengelass']},
+     {g:'Abschluss', items:['Plan vollständig geprüft']}
+   ]
+ },
+ { id:'smartphone', no:6, title:'Smartphone-Fotos', sub:'Außen, Details, Mikrolage', icon:'smartphone',
+   verstehen:{
+     lead:'Das Smartphone ist unser Schweizer Taschenmesser: immer dabei, schnell, klein – und perfekt für alles, was die Matterport nicht kann.',
+     cards:[
+       {h:'Wofür das Smartphone?', list:['Außenaufnahmen & Fassade','Mikrolage & Nachbarschaft','Details & Impressionen','Herobild von Garten, Terrasse, Balkon','Mehrfamilienhäuser: hier reicht das Smartphone (keine 3D-Tour)']},
+       {h:'Stärken', p:'Ungewöhnliche Perspektiven sind leicht umzusetzen – z. B. Detailaufnahmen. Bei viel Licht, besonders außen, ist die Qualität sehr gut.'},
+       {h:'Achtung', p:'Keine Schnappschüsse! Zeit nehmen, Smartphone ausrichten: Querformat und gerade halten.'},
+       {h:'Impressionen für mehr Emotion', list:['Stuckrosetten','Gemauerter Kamin','Besondere Böden & Materialien','Pool, Sauna, Fußbodenheizung','Pflanzen, Blumen & Garten','Hausautomation']}
+     ],
+     images:[
+       {src:'img/sp-bsp.jpg', cap:'Beispiele Smartphone: Fassade, Kiez, Spielstraße'},
+       {src:'img/details.jpg', cap:'Details: Stuck, Altbau-Türgriff, Parkett'},
+       {src:'img/hl-aussen.jpg', cap:'Highlights außen: links vorher ✗, rechts nachher ✓'}
+     ],
+     tip:{h:'Merksatz', p:'Quer, gerade, sauber – und Zeit nehmen.'}
+   },
+   steps:[
+     {h:'Kamera einstellen', p:'Einmal richtig, dann immer gut.', list:['Linsen sauber?','HDR ein – für hohen Kontrastumfang','Raster ein (Einstellungen → Kamera → Raster)','Format 16:9']},
+     {h:'Querformat & gerade', p:'Immer horizontal.', list:['Immer Querformat 16:9','Am Raster ausrichten','Stürzende Linien vermeiden – Smartphone gerade halten (!)']},
+     {h:'Haus außen', p:'Der erste Eindruck.', list:['Fassade, Immobilie von vorne','Einfahrt, Haus und Straße, Hof','Sonne im Rücken, pralle Mittagssonne meiden']},
+     {h:'Highlights außen', p:'Das Herobild.', list:['Garten, Terrasse, Balkon','Vorher aufräumen, Grill & Möbel abdecken','Abdeckfolie vom Pool ab'], img:'img/hl-aussen.jpg', tip:'Zum Träumen verführen.'},
+     {h:'Details & Impressionen', p:'Wenige, besondere Fotos.', list:['Holzfußböden, Stuck, Altbautüren','Kamin, besondere Materialien','Nah ran, ungewöhnliche Perspektive'], img:'img/details.jpg'},
+     {h:'Mikrolage', p:'Wer wohnt dort und wie?', list:['Direkte Nachbarschaft, Kiez-Highlights','Restaurants, Einkauf','ÖPNV, Spielstraße, Spielplätze','Seen & Wälder'], img:'img/sp-bsp.jpg', tip:'Familien suchen Sicherheit, andere Familien und Natur.'},
+     {h:'Mehrfamilienhaus', p:'Hier ersetzt das Smartphone die Matterport.', list:['Alle Räume im Querformat','Licht & Ordnung wie bei Foto-Basics','Dazu Außen & Mikrolage']}
+   ],
+   checklist:[
+     {g:'Einstellungen', items:['Linsen sauber','HDR an','Raster an','Querformat 16:9']},
+     {g:'Motive', items:['Fassade / von vorne','Einfahrt, Hof, Haus & Straße','Garten / Terrasse / Balkon (Herobild)','Details & Impressionen','Kiez & Nachbarschaft','ÖPNV & Einkauf','Spielplätze, Seen, Wälder']}
+   ]
+ },
+ { id:'flaeche', no:7, title:'Wohnfläche', sub:'1-m- und 2-m-Linie, Rechner', icon:'flaeche', calc:true,
+   verstehen:{
+     lead:'Bei Dachschrägen zählt nicht die ganze Grundfläche. Entscheidend ist die lichte Höhe – geregelt in § 4 der Wohnflächenverordnung (WoFlV).',
+     diagram:true,
+     cards:[
+       {h:'Die Regel nach WoFlV', list:['Ab <b>2 m</b> lichter Höhe: <b>100 %</b>','Zwischen <b>1 m und 2 m</b>: <b>50 %</b>','Unter <b>1 m</b>: <b>0 %</b>']},
+       {h:'Balkon, Terrasse & Co.', list:['Balkone, Loggien, Dachgärten, Terrassen: in der Regel <b>25 %</b>, höchstens <b>50 %</b>','Unbeheizte Wintergärten & Schwimmbäder (allseitig geschlossen): <b>50 %</b>']},
+       {h:'Warum die Linien?', p:'Die 1-m-Linie und die 2-m-Linie teilen den Raum in drei Zonen. Wir messen, wie weit diese Linien von der Wand entfernt sind – daraus ergibt sich die Wohnfläche.'},
+       {h:'Hinweis', p:'Der Rechner dient der Orientierung vor Ort. Die verbindliche Berechnung erfolgt im Büro. Messwerte an Cola.'}
+     ],
+     tip:{h:'Merksatz', p:'Unter 1 m nichts, bis 2 m die Hälfte, ab 2 m alles.'}
+   },
+   steps:[
+     {h:'Werkzeug', p:'Du brauchst:', list:['Bosch-Laser (oder Zollstock)','iPad mit Magicplan für die Notizen']},
+     {h:'Laser auf den Boden', p:'Messen von unten nach oben.', list:['Laser flach auf den Boden legen','Strahl nach oben auf die Dachschräge richten']},
+     {h:'1-m-Linie finden', p:'Zur Wand hin schieben.', list:['Laser langsam Richtung Außenwand schieben','Bis das Display <b>1,00 m</b> zeigt','Diese Stelle am Boden merken'], tip:'Mit dem Zollstock: senkrecht auf 1 m aufklappen und an die Schräge heranschieben.'},
+     {h:'Abstand zur Wand', p:'Den Abstand der 1-m-Linie messen.', list:['Von der Wand (Kniestock) bis zur markierten Stelle messen','Wert notieren: „1 m – Abstand zur Wand“'], tip:'Ist der Kniestock schon 1 m hoch oder höher, ist der Abstand 0.'},
+     {h:'2-m-Linie finden', p:'Gleiches Spiel bei 2 m.', list:['Laser weiter in den Raum schieben','Bis das Display <b>2,00 m</b> zeigt','Abstand zur Wand messen und notieren']},
+     {h:'Raum vervollständigen', p:'Für die Berechnung fehlt noch:', list:['Raumlänge entlang der Schräge','Raumtiefe gesamt (Wand zu Wand)','Schräge auf einer oder beiden Seiten?']},
+     {h:'Notieren & weitergeben', p:'Damit im Büro richtig gerechnet wird.', list:['Werte in Magicplan-Notizen schreiben','Infos an Cola','Optional: im Rechner gegenprüfen']}
+   ],
+   checklist:[
+     {g:'Pro Raum mit Dachschräge', items:['Abstand 1-m-Linie zur Wand','Abstand 2-m-Linie zur Wand','Raumlänge entlang der Schräge','Raumtiefe gesamt','Eine oder beide Seiten?','In Magicplan notiert']},
+     {g:'Außenflächen', items:['Balkon / Terrasse gemessen','Wintergarten? beheizt oder unbeheizt']},
+     {g:'Abschluss', items:['Infos an Cola']}
+   ]
+ }
+
+];
+
+/* ---------- Speicher (sicher, falls nicht verfügbar) ---------- */
+const store = {
+  get(k,d){try{const v=localStorage.getItem('i360_'+k);return v?JSON.parse(v):d}catch(e){return d}},
+  set(k,v){try{localStorage.setItem('i360_'+k,JSON.stringify(v))}catch(e){}}
+};
+
+/* ---------- Navigation ---------- */
+const $ = id => document.getElementById(id);
+function show(id){['home','module'].forEach(s=>$(s).classList.toggle('hidden',s!==id))}
+
+$('lockBtn').onclick=()=>{location.href='/api/logout'};
+
+/* ---------- Homescreen ---------- */
+function progress(m){
+  if(!m.checklist) return null;
+  const total=m.checklist.reduce((a,g)=>a+g.items.length,0);
+  const done=Object.values(store.get('cl3_'+m.id,{})).filter(Boolean).length;
+  return Math.round(done/total*100);
+}
+function renderHome(){
+  $('grid').innerHTML=MODULES.map(m=>{
+    const p=progress(m);
+    return `<button class="tile ${m.wide?'wide':''}" data-id="${m.id}">
+      <div class="ic">${svg(m.icon)}</div><div class="no">${String(m.no).padStart(2,'0')}</div>
+      <h3>${m.title}</h3><p>${m.sub}</p>
+      ${p!==null?`<div class="bar"><i style="width:${p}%"></i></div>`:''}
+    </button>${m.abschluss?`<button class="cta" id="ctaAbschluss"><svg viewBox="0 0 24 24"><path d="M5 12l5 5 9-10"/></svg>Termin abschließen${protoCount()?` <small>${protoCount()}/${ABSCHLUSS.length}</small>`:''}</button>`:''}`}).join('');
+}
+$('grid').addEventListener('click',e=>{if(e.target.closest('#ctaAbschluss')){startTab='abschluss';openModule('termin');return}const t=e.target.closest('.tile'); if(t) openModule(t.dataset.id)});
+
+/* ---------- Modul ---------- */
+let cur=null, startTab=null;
+function openModule(id){
+  cur=MODULES.find(m=>m.id===id);
+  $('mdTitle').textContent=cur.title; $('mdSub').textContent=cur.sub;
+  $('tabs').style.display=cur.verstehen?'flex':'none';
+  if(!cur.verstehen){
+    $('mdBody').innerHTML=`<div class="soon"><div class="ic">${svg(cur.icon)}</div><h4>In Arbeit</h4><p>Dieses Modul wird als Nächstes mit Inhalten gefüllt – nach dem gleichen Muster wie „Termin vor Ort“.</p></div>`;
+  } else {
+    const tabs=[['verstehen','Verstehen'],['schritte',cur.catalog?(cur.catalogLabel||'Katalog'):'Schritte']];
+    if(cur.calc) tabs.push(['rechner','Rechner']);
+    tabs.push(['checkliste','Checkliste']);
+    if(cur.abschluss) tabs.push(['abschluss','Abschluss']);
+    $('tabs').innerHTML=tabs.map(([k,l])=>`<button class="tab" data-p="${k}">${l}</button>`).join('');
+    $('mdBody').innerHTML=tabs.map(([k])=>`<div class="panel" id="p-${k}"></div>`).join('');
+    renderVerstehen(); cur.catalog?renderCatalog():renderSteps(); if(cur.calc) renderCalc(); if(cur.abschluss) renderAbschluss(); renderChecklist(); setTab(startTab||'verstehen'); startTab=null;
+  }
+  $('mdBody').scrollTop=0; show('module');
+}
+function setTab(p){
+  document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('on',t.dataset.p===p));
+  document.querySelectorAll('.panel').forEach(x=>x.classList.toggle('on',x.id==='p-'+p));
+  $('mdBody').scrollTop=0;
+}
+$('tabs').addEventListener('click',e=>{const t=e.target.closest('.tab'); if(t) setTab(t.dataset.p)});
+$('backBtn').onclick=()=>{renderHome();show('home')};
+
+function renderVerstehen(){
+  const v=cur.verstehen;
+  $('p-verstehen').innerHTML=`<p class="lead">${v.lead}</p>`
+   + (v.diagram?DIAGRAM:'')
+   + v.cards.map(c=>`<div class="card"><h4>${c.h}</h4>${c.p?`<p>${c.p}</p>`:''}${c.list?`<ul>${c.list.map(l=>`<li>${l}</li>`).join('')}</ul>`:''}</div>`).join('')
+   + (v.images?`<div class="group">Beispiele</div>`+v.images.map(i=>`<figure class="fig"><img src="${i.src}" alt="" loading="lazy" data-zoom><figcaption>${i.cap}</figcaption></figure>`).join(''):'')
+   + `<div class="card tip"><h4>💡 ${v.tip.h}</h4><p>${v.tip.p}</p></div>`
+   + `<button class="btn" style="width:100%;margin-top:6px" onclick="setTab('schritte')">${cur.catalog?'Zum Katalog':'Zum Ablauf'} →</button>`;
+}
+
+function renderSteps(){
+  const s=cur.steps;
+  $('p-schritte').innerHTML=`<div class="steps" id="steps">${s.map((x,i)=>`
+    <div class="step"><div class="num">${i+1}</div><h4>${x.h}</h4><p>${x.p}</p>
+    ${x.list?`<ul>${x.list.map(l=>`<li>${l}</li>`).join('')}</ul>`:''}
+    ${x.img?`<img class="step-img" src="${x.img}" alt="" loading="lazy" data-zoom>`:''}
+    ${x.tip?`<div class="tip">💡 ${x.tip}</div>`:''}</div>`).join('')}</div>
+    <div class="stepnav"><button class="btn light" id="prev">Zurück</button>
+    <div class="sdots" id="sdots">${s.map(()=>'<span></span>').join('')}</div>
+    <button class="btn" id="next">Weiter</button></div>`;
+  const el=$('steps');
+  const idx=()=>Math.round(el.scrollLeft/(el.clientWidth));
+  const go=i=>el.scrollTo({left:i*(el.clientWidth),behavior:'smooth'});
+  const paint=()=>{const i=idx();[...$('sdots').children].forEach((d,j)=>d.classList.toggle('on',j===i));
+    $('prev').disabled=i===0;$('next').textContent=i===s.length-1?'Zur Checkliste':'Weiter'};
+  el.addEventListener('scroll',()=>requestAnimationFrame(paint));
+  $('prev').onclick=()=>go(idx()-1);
+  $('next').onclick=()=>{const i=idx(); i===s.length-1?setTab('checkliste'):go(i+1)};
+  paint();
+}
+
+
+function renderCatalog(){
+  $('p-schritte').innerHTML=`<p class="lead" style="font-size:16px">Antippen für Details: Warum es wirkt, was du vorbereitest und wie du es aufnimmst.</p>`+
+  cur.catalog.map(g=>`<div class="group">${g.g}</div>`+g.items.map(it=>`
+   <div class="hl">
+    <button class="hl-head"><span class="hl-n">${it.n}</span><span class="pill">${it.f}</span><svg class="chev" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg></button>
+    <div class="hl-body">
+      <div class="hl-sec"><b>Warum es wirkt</b><p>Es weckt das Gefühl: <b>${it.f}</b>.</p></div>
+      ${it.prep&&it.prep[0]!=='–'?`<div class="hl-sec"><b>Vorbereiten</b><ul>${it.prep.map(x=>`<li>${x}</li>`).join('')}</ul></div>`:''}
+      <div class="hl-sec"><b>Aufnehmen</b>${it.shoot.map(([d,...t])=>`<div class="dev"><span class="badge ${d==='Matterport'?'mp':'sp'}">${d}</span><ul>${t.map(x=>`<li>${x}</li>`).join('')}</ul></div>`).join('')}</div>
+      ${it.tip?`<div class="tip" style="padding:10px 12px;border-radius:10px;font-size:15px">💡 ${it.tip}</div>`:''}
+    </div>
+   </div>`).join('')).join('');
+  $('p-schritte').onclick=e=>{const h=e.target.closest('.hl-head'); if(h) h.parentElement.classList.toggle('open')};
+}
+
+
+/* ---------- Bild-Zoom ---------- */
+document.addEventListener('click',e=>{
+  const im=e.target.closest('[data-zoom]'); if(!im) return;
+  $('zoomImg').src=im.src; $('zoom').classList.remove('hidden');
+});
+$('zoom').onclick=()=>$('zoom').classList.add('hidden');
+
+/* ---------- Skizze Dachschräge ---------- */
+const DIAGRAM=`<div class="card"><h4>So teilt die Schräge den Raum</h4>
+<svg class="diag" viewBox="0 0 340 230" xmlns="http://www.w3.org/2000/svg" font-family="Source Sans 3, sans-serif">
+  <polygon points="20,190 20,165 45,140 45,190" fill="#E3E7EC"/>
+  <polygon points="45,190 45,140 95,90 95,190" fill="#FCE9B8"/>
+  <polygon points="95,190 95,90 125,60 320,60 320,190" fill="#DCE6F0"/>
+  <polyline points="20,190 20,165 125,60 320,60" fill="none" stroke="#143758" stroke-width="3" stroke-linejoin="round"/>
+  <line x1="12" y1="190" x2="328" y2="190" stroke="#143758" stroke-width="3"/>
+  <line x1="45" y1="190" x2="45" y2="140" stroke="#143758" stroke-width="1.5" stroke-dasharray="4 3"/>
+  <line x1="95" y1="190" x2="95" y2="90" stroke="#143758" stroke-width="1.5" stroke-dasharray="4 3"/>
+  <text x="49" y="150" font-size="11" fill="#143758" font-weight="700">1 m</text>
+  <text x="99" y="100" font-size="11" fill="#143758" font-weight="700">2 m</text>
+  <text x="32" y="183" font-size="12" text-anchor="middle" fill="#6B7A8C" font-weight="700">0%</text>
+  <text x="70" y="183" font-size="13" text-anchor="middle" fill="#8a6410" font-weight="700">50%</text>
+  <text x="210" y="130" font-size="20" text-anchor="middle" fill="#143758" font-weight="700">100%</text>
+  <text x="210" y="150" font-size="11" text-anchor="middle" fill="#6B7A8C">ab 2 m lichter Höhe</text>
+  <line x1="20" y1="205" x2="45" y2="205" stroke="#C99A1E" stroke-width="2"/><line x1="20" y1="200" x2="20" y2="210" stroke="#C99A1E" stroke-width="2"/><line x1="45" y1="200" x2="45" y2="210" stroke="#C99A1E" stroke-width="2"/>
+  <line x1="20" y1="222" x2="95" y2="222" stroke="#143758" stroke-width="2"/><line x1="20" y1="217" x2="20" y2="227" stroke="#143758" stroke-width="2"/><line x1="95" y1="217" x2="95" y2="227" stroke="#143758" stroke-width="2"/>
+  <text x="50" y="209" font-size="10" fill="#8a6410">Abstand 1-m-Linie zur Wand</text>
+  <text x="100" y="226" font-size="10" fill="#143758">Abstand 2-m-Linie zur Wand</text>
+</svg></div>`;
+
+/* ---------- Rechner ---------- */
+let rooms=[];
+const num=v=>{const n=parseFloat(String(v).replace(',','.'));return isFinite(n)&&n>=0?n:0};
+const f2=n=>n.toLocaleString('de-DE',{minimumFractionDigits:2,maximumFractionDigits:2});
+function renderCalc(){
+  $('p-rechner').innerHTML=`
+  <div class="card"><h4>Raum mit Dachschräge</h4>
+    <label class="fld"><span>Raumname</span><input id="cName" placeholder="z. B. Schlafzimmer"></label>
+    <label class="fld"><span>Raumlänge entlang der Schräge (m)</span><input id="cL" inputmode="decimal" placeholder="4,20"></label>
+    <label class="fld"><span>Raumtiefe gesamt, Wand zu Wand (m)</span><input id="cT" inputmode="decimal" placeholder="3,80"></label>
+    <label class="fld"><span>Abstand 1-m-Linie zur Wand (m)</span><input id="cA1" inputmode="decimal" placeholder="0,30"></label>
+    <label class="fld"><span>Abstand 2-m-Linie zur Wand (m)</span><input id="cA2" inputmode="decimal" placeholder="1,20"></label>
+    <div class="seg" id="cSide"><button class="on" data-v="1">Schräge 1 Seite</button><button data-v="2">2 Seiten</button></div>
+    <div class="res" id="cRes"></div>
+    <button class="btn" style="width:100%;margin-top:12px" id="cAdd">Zur Liste hinzufügen</button>
+  </div>
+  <div class="card"><h4>Weitere Flächen</h4><p class="hint" style="margin-top:0">Balkon, Terrasse, Wintergarten oder Raum ohne Schräge</p>
+    <label class="fld"><span>Bezeichnung</span><input id="bName" placeholder="z. B. Balkon"></label>
+    <label class="fld"><span>Grundfläche (m²)</span><input id="bA" inputmode="decimal" placeholder="6,50"></label>
+    <div class="seg" id="bF"><button class="on" data-v="0.25">25 %</button><button data-v="0.5">50 %</button><button data-v="1">100 %</button></div>
+    <p class="hint">Balkon/Terrasse in der Regel 25 %, max. 50 %. Unbeheizter Wintergarten 50 %. Raum ohne Schräge: 100 %.</p>
+    <button class="btn light" style="width:100%;margin-top:10px" id="bAdd">Zur Liste hinzufügen</button>
+  </div>
+  <div class="card"><h4>Liste</h4><div id="rList"></div></div>`;
+  let side=1,bf=0.25;
+  const calc=()=>{
+    const L=num($('cL').value),T=num($('cT').value),a1=num($('cA1').value),a2=num($('cA2').value);
+    if(!L||!T){$('cRes').innerHTML='<p class="hint">Werte eingeben – das Ergebnis erscheint hier.</p>';return null}
+    if(a2<a1){$('cRes').innerHTML='<p class="warn">Die 2-m-Linie muss weiter von der Wand entfernt sein als die 1-m-Linie.</p>';return null}
+    if(side*a2>T){$('cRes').innerHTML='<p class="warn">Die Abstände sind größer als die Raumtiefe – bitte prüfen.</p>';return null}
+    const z0=side*a1*L,z50=side*(a2-a1)*L,z100=(T-side*a2)*L,wf=z100+z50/2;
+    $('cRes').innerHTML=`<div class="rz"><span>0 % · unter 1 m</span><b>${f2(z0)} m²</b></div>
+      <div class="rz"><span>50 % · 1–2 m</span><b>${f2(z50)} m² → ${f2(z50/2)} m²</b></div>
+      <div class="rz"><span>100 % · ab 2 m</span><b>${f2(z100)} m²</b></div>
+      <div class="rz tot"><span>Wohnfläche</span><b>${f2(wf)} m²</b></div>`;
+    return wf;
+  };
+  ['cL','cT','cA1','cA2'].forEach(i=>$(i).addEventListener('input',calc));
+  $('cSide').onclick=e=>{const b=e.target.closest('button');if(!b)return;side=+b.dataset.v;[...$('cSide').children].forEach(x=>x.classList.toggle('on',x===b));calc()};
+  $('bF').onclick=e=>{const b=e.target.closest('button');if(!b)return;bf=+b.dataset.v;[...$('bF').children].forEach(x=>x.classList.toggle('on',x===b))};
+  $('cAdd').onclick=()=>{const wf=calc();if(wf==null)return;rooms.push({n:$('cName').value||'Raum '+(rooms.length+1),v:wf});['cName','cL','cT','cA1','cA2'].forEach(i=>$(i).value='');calc();list()};
+  $('bAdd').onclick=()=>{const a=num($('bA').value);if(!a)return;rooms.push({n:($('bName').value||'Außenfläche')+' ('+(bf*100)+' %)',v:a*bf});$('bName').value='';$('bA').value='';list()};
+  const list=()=>{
+    $('rList').innerHTML=rooms.length?rooms.map((r,i)=>`<div class="rz"><span>${r.n}</span><b>${f2(r.v)} m² <button class="x" data-i="${i}">✕</button></b></div>`).join('')
+      +`<div class="rz tot"><span>Summe</span><b>${f2(rooms.reduce((a,r)=>a+r.v,0))} m²</b></div>`
+      :'<p class="hint">Noch leer. Räume oben berechnen und hinzufügen.</p>';
+  };
+  $('rList').onclick=e=>{const x=e.target.closest('.x');if(x){rooms.splice(+x.dataset.i,1);list()}};
+  calc();list();
+}
+
+
+/* ---------- Abschluss-Protokoll ---------- */
+const ABSCHLUSS=['Alle Räume im 3D-Rundgang','Balkon, Terrasse & Garten erfasst','Herobild aufgenommen','Außenansicht & Mikrolage fotografiert','Aufmaß vollständig inkl. Deckenhöhe','Dachschrägen 1 m / 2 m gemessen','Immobilie ordentlich verlassen'];
+const getProto=()=>store.get('proto',{obj:'',by:store.get('name',''),start:null,checks:{},note:'',auto:false});
+const protoCount=()=>{const p=getProto();return ABSCHLUSS.filter((_,i)=>p.checks[i]).length};
+let dlAPI=undefined;
+const nativeDL={save:async({filename,data})=>{
+  const file=new File([data],filename,{type:'application/pdf'});
+  const touch=matchMedia('(pointer:coarse)').matches;
+  if(touch&&navigator.canShare&&navigator.canShare({files:[file]})){
+    try{await navigator.share({files:[file],title:filename});return {status:'saved'}}
+    catch(e){if(e&&e.name==='AbortError')throw {code:'declined'}}
+  }
+  const u=URL.createObjectURL(data),a=document.createElement('a');a.href=u;a.download=filename;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),4000);
+  return {status:'saved'};
+}};
+(async()=>{try{dlAPI=window.claude&&claude.use?(await claude.use('downloads')):nativeDL}catch(e){dlAPI=nativeDL} if(cur&&cur.abschluss&&$('p-abschluss'))renderAbschluss()})();
+const fmtDT=d=>new Date(d).toLocaleString('de-DE',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'});
+function renderAbschluss(){
+  const p=getProto();
+  const done=protoCount();
+  $('p-abschluss').innerHTML=`
+   <p class="lead" style="font-size:16px">Die wichtigsten Punkte zum Schluss. Alles wird sofort auf dem Gerät gesichert. Sind alle Punkte erledigt, wird das PDF automatisch angeboten.</p>
+   <div class="card">
+     <label class="fld" style="margin-top:0"><span>Objekt / Adresse</span><input id="pObj" value="${(p.obj||'').replace(/"/g,'&quot;')}" placeholder="z. B. Musterstraße 12, Berlin"></label>
+     <label class="fld"><span>Aufgenommen von</span><input id="pBy" value="${(p.by||'').replace(/"/g,'&quot;')}" placeholder="Name"></label>
+     <p class="hint">${p.start?'Begonnen: '+fmtDT(p.start):'Datum & Uhrzeit werden automatisch eingetragen.'}</p>
+   </div>
+   <div class="cl-prog"><div class="bar"><i style="width:${done/ABSCHLUSS.length*100}%"></i></div><b>${done}/${ABSCHLUSS.length}</b></div>
+   ${ABSCHLUSS.map((t,i)=>`<button class="check pchk ${p.checks[i]?'done':''}" data-i="${i}"><div class="box"><svg viewBox="0 0 24 24"><path d="M5 12l5 5 9-10"/></svg></div><span>${t}</span></button>`).join('')}
+   <label class="fld" style="margin-top:16px"><span>Notiz</span><textarea id="pNote" rows="5" placeholder="z. B. Garten bei Regen – Außenfotos beim Besichtigungstermin nachholen">${(p.note||'').replace(/</g,'&lt;')}</textarea></label>
+   <div id="pMsg" class="hint"></div>
+   ${dlAPI===null?'<p class="warn">PDF speichern ist in dieser Ansicht nicht verfügbar. Bitte die App direkt in claude.ai öffnen.</p>':''}
+   <button class="btn yellow" style="width:100%;margin-top:12px" id="pPdf" ${dlAPI===null?'disabled':''}>PDF speichern</button>
+   <button class="reset" id="pNew">Neues Protokoll beginnen</button>`;
+  const save=()=>{const q=getProto();q.obj=$('pObj').value;q.by=$('pBy').value;q.note=$('pNote').value;if(!q.start&&(q.obj||q.note))q.start=Date.now();store.set('proto',q);store.set('name',q.by)};
+  ['pObj','pBy','pNote'].forEach(i=>$(i).addEventListener('input',save));
+  $('p-abschluss').onclick=async e=>{
+    const c=e.target.closest('.pchk');
+    if(c){save();const q=getProto();const i=c.dataset.i;q.checks[i]=!q.checks[i];if(!q.start)q.start=Date.now();
+      const all=ABSCHLUSS.every((_,k)=>q.checks[k]);if(!all)q.auto=false;
+      const fire=all&&!q.auto; if(fire)q.auto=true; store.set('proto',q); renderAbschluss();
+      if(fire){$('pMsg').textContent='Alles erledigt – PDF wird erstellt …';makePdf()} return}
+    if(e.target.id==='pPdf'){save();makePdf()}
+    if(e.target.id==='pNew'){askReset('Neues Protokoll beginnen?','Objekt, Haken und Notiz werden geleert. Dein Name bleibt.',()=>{store.set('proto',{obj:'',by:store.get('name',''),start:null,checks:{},note:'',auto:false});renderAbschluss()})}
+  };
+}
+function pdfText(t){return String(t||'').replace(/[–—]/g,'-').replace(/[„“”]/g,'"').replace(/[‚‘’]/g,"'").replace(/…/g,'...').replace(/[^\x00-\xFF€]/g,'')}
+async function makePdf(){
+  const msg=t=>{const m=$('pMsg');if(m)m.textContent=t};
+  if(!window.jspdf){msg('PDF-Modul lädt noch – bitte gleich noch einmal tippen.');return}
+  const p=getProto(), now=Date.now();
+  const {jsPDF}=window.jspdf; const d=new jsPDF({unit:'mm',format:'a4'});
+  const B=[20,55,88],Y=[247,192,71],G=[107,122,140];
+  const W=210,M=18; let y=0;
+  const footer=()=>{d.setFontSize(8);d.setTextColor(...G);d.text('Erstellt mit dem Immo360° Aufnahme-Guide · '+fmtDT(now),M,289);d.text('Seite '+d.getNumberOfPages(),W-M,289,{align:'right'})};
+  const need=h=>{if(y+h>280){footer();d.addPage();y=20}};
+  d.setFillColor(...B);d.rect(0,0,W,34,'F');d.setFillColor(...Y);d.rect(0,34,W,1.6,'F');
+  d.setFont('helvetica','bold');d.setFontSize(22);d.setTextColor(255,255,255);d.text('Immo',M,17);
+  const iw=d.getTextWidth('Immo');d.setTextColor(...Y);d.text('360°',M+iw,17);
+  d.setFont('helvetica','normal');d.setFontSize(11);d.setTextColor(255,255,255);d.text('Aufnahme-Protokoll · Termin vor Ort',M,26);
+  y=48;
+  const row=(k,v)=>{d.setFont('helvetica','bold');d.setFontSize(10);d.setTextColor(...G);d.text(k,M,y);d.setFont('helvetica','normal');d.setFontSize(11);d.setTextColor(...B);const L=d.splitTextToSize(pdfText(v)||'-',W-2*M-45);d.text(L,M+45,y);y+=6*L.length+1};
+  row('Objekt / Adresse',p.obj);row('Aufgenommen von',p.by);row('Begonnen',p.start?fmtDT(p.start):'-');row('Abgeschlossen',fmtDT(now));
+  const n=ABSCHLUSS.filter((_,i)=>p.checks[i]).length;
+  row('Status',n===ABSCHLUSS.length?'Alle Punkte erledigt':n+' von '+ABSCHLUSS.length+' Punkten erledigt');
+  y+=4;d.setDrawColor(227,231,236);d.line(M,y,W-M,y);y+=10;
+  d.setFont('helvetica','bold');d.setFontSize(13);d.setTextColor(...B);d.text('Checkliste',M,y);y+=8;
+  ABSCHLUSS.forEach((t,i)=>{need(10);const ok=!!p.checks[i];
+    if(ok){d.setFillColor(...Y);d.roundedRect(M,y-4.5,6,6,1.2,1.2,'F');d.setDrawColor(...B);d.setLineWidth(.7);d.line(M+1.3,y-1.6,M+2.6,y-.2);d.line(M+2.6,y-.2,M+4.8,y-3.2);d.setLineWidth(.2)}
+    else{d.setDrawColor(201,210,220);d.setLineWidth(.5);d.roundedRect(M,y-4.5,6,6,1.2,1.2,'S');d.setLineWidth(.2)}
+    d.setFont('helvetica','normal');d.setFontSize(11);d.setTextColor(...B);d.text(pdfText(t),M+10,y);
+    d.setFont('helvetica','bold');d.setFontSize(9);d.setTextColor(...(ok?[46,125,50]:[178,59,42]));d.text(ok?'erledigt':'offen',W-M,y,{align:'right'});y+=9});
+  y+=4;need(20);d.setFont('helvetica','bold');d.setFontSize(13);d.setTextColor(...B);d.text('Notiz',M,y);y+=7;
+  d.setFont('helvetica','normal');d.setFontSize(11);d.setTextColor(43,69,96);
+  const lines=d.splitTextToSize(pdfText(p.note)||'Keine Notiz.',W-2*M);
+  lines.forEach(l=>{need(6);d.text(l,M,y);y+=5.6});
+  footer();
+  const slug=pdfText(p.obj).trim().replace(/[^A-Za-z0-9ÄÖÜäöüß]+/g,'-').replace(/^-|-$/g,'').slice(0,60)||'Objekt';
+  const fn='Aufnahme_'+slug+'_'+new Date(now).toISOString().slice(0,10)+'.pdf';
+  const blob=d.output('blob');
+  if(!dlAPI){msg('PDF speichern ist in dieser Ansicht nicht verfügbar.');return}
+  try{await dlAPI.save({filename:fn,data:blob});msg('Gespeichert: '+fn)}
+  catch(err){const c=err&&err.code;msg(c==='declined'?'Speichern abgebrochen. Mit „PDF speichern“ jederzeit erneut.':c==='rate_limited'?'Ein Speichern-Dialog ist schon offen.':'Speichern hier nicht möglich ('+(c||'Fehler')+').')}
+}
+let resetCb=null;
+function askReset(h,t,cb){$('dlgH').textContent=h;$('dlgP').textContent=t;resetCb=cb;$('dlg').classList.remove('hidden')}
+
+function renderChecklist(){
+  const st=store.get('cl3_'+cur.id,{});
+  let total=0,done=0,html='';
+  cur.checklist.forEach((g,gi)=>{
+    html+=`<div class="group">${g.g}</div>`;
+    g.items.forEach((it,ii)=>{const k=gi+'_'+ii,on=!!st[k];total++;if(on)done++;
+      html+=`<button class="check ${on?'done':''}" data-k="${k}"><div class="box"><svg viewBox="0 0 24 24"><path d="M5 12l5 5 9-10"/></svg></div><span>${it}</span></button>`});
+  });
+  $('p-checkliste').innerHTML=`<div class="cl-prog"><div class="bar"><i style="width:${done/total*100}%"></i></div><b>${done}/${total}</b></div>${html}<button class="reset" id="reset">Checkliste zurücksetzen</button>`;
+  $('p-checkliste').onclick=e=>{
+    const c=e.target.closest('.check');
+    if(c){st[c.dataset.k]=!st[c.dataset.k];store.set('cl3_'+cur.id,st);renderChecklist();return}
+    if(e.target.id==='reset') askReset('Checkliste zurücksetzen?','Alle Haken in diesem Modul werden entfernt – praktisch für den nächsten Termin.',()=>{store.set('cl3_'+cur.id,{});renderChecklist()});
+  };
+}
+$('dlgNo').onclick=()=>$('dlg').classList.add('hidden');
+$('dlgYes').onclick=()=>{$('dlg').classList.add('hidden');if(resetCb)resetCb();resetCb=null};
+renderHome();
+</script>
+</body>
+</html>
